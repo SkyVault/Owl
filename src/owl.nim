@@ -55,13 +55,25 @@ proc collectionDetails(db: Database, collectionId: string): string =
   )
 
 proc createFragmentForm(db: Database): string =
+  let allStatuses = db.statuses()
+  let os = collect(
+    for s in allStatuses.items:
+      option(value=s, s)
+  ).join("\n")
+
   form(action="/new-fragment", `method`="post",
     script(src="https://cdn.tailwindcss.com"),
     `div`(
       class="text-white",
       `div`(class="text-3xl","NEW FRAGMENT"),
       textInput("title", "Title"), br(),
-      textInput("description", "Description"), br(),
+      textArea("description", "Description"), br(),
+      `div`(
+        label(`for`="status", "Status: "), 
+        input(name="status", class="bg-slate-700 text-white", type="text", list="statuses")
+      ),
+      datalist(id="statuses", class="text-white bg-slate-700", os),
+      br(),
       submitInputButton("Submit"),
     )
   )
@@ -73,7 +85,7 @@ proc createCollectionForm(db: Database): string =
       class="text-white",
       `div`(class="text-3xl", "NEW COLLECTION"),
       textInput("title", "Title"), br(),
-      textInput("description", "Description"), br(),
+      textArea("description", "Description"), br(),
       submitInputButton("Submit"),
     )
   )
@@ -91,7 +103,16 @@ proc selectFragment(db: Database, postPrefix, postDest: string): string =
   )
 
 proc dashboard(db: Database): string =
+  let 
+    (sm, smJs, smCss) = selectionModal("selection_modal")
+    statuses = db.statuses()
+    statusXs = collect(for s in statuses: &"'{s}'").join(", ")
+
   pageBase(
+    sm,
+    script(smJs),
+    style(smCss),
+    # button("testme", onclick=fmt"open_selection_modal((it) => {{ console.log(it); close_selection_modal() }}, [{statusXs}])"),
     `div`(class="text-4xl mb-2", "Database"),
     `div`(
       class="mb-4",
@@ -126,7 +147,14 @@ proc dashboard(db: Database): string =
               class="flex justify-between w-100 mb-2",
               `div`(
                 class="flex flex-row gap-1",
-                if f.status != "": `div`(class="text-pink-400 rounded bg-slate-700 px-2", f.status) else: "",
+                if f.status != "": 
+                  `div`(
+                    onclick=fmt"open_selection_modal((it) => {{ window.location.href = '/set-fragment-status/{f.id}/' + it; close_selection_modal() }}, [{statusXs}])",
+                    class="text-pink-400 rounded bg-slate-700 px-2", 
+                    f.status
+                  ) 
+                else: 
+                  "",
                 a(class="text-blue-600", onclick=fmt"show_modal('/fragment/{f.id}')", f.title)
               ),
               `div`(
@@ -166,6 +194,10 @@ routes:
   get "/add-fragment-to-collection/@collection-id/@fragment-id":
     loadDatabase() |> addFragmentToCollection(@"collection-id", @"fragment-id") |> saveDatabase
     resp reloadParent()
+
+  get "/set-fragment-status/@fragment-id/@status":
+    loadDatabase() |> setFragmentStatusMutation(@"fragment-id", encodeUrl(@"status")) |> saveDatabase
+    resp script("window.location.replace('/')")
 
   post "/remove-fragment-from-collection/@collection-id/@fragment-id":
     loadDatabase() |> removeFragmentFromCollection(@"collection-id", @"fragment-id") |> saveDatabase
