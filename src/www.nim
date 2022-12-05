@@ -67,11 +67,12 @@ proc textInput* (name: string, label: string): string =
 proc submitInputButton* (label: string): string =
   input(type="submit", value=label, class=fmt"{BTN_STYLE} bg-green-300")
 
-proc actionButton* (title, onclick, color = "bg-pink-200"): string =
+proc actionButton* (title, onclick, color = "bg-blue-300"): string =
   button(class=fmt"{BTN_STYLE} {color}", onclick=onclick, title)
 
 proc postButton* (label, url: string): string =
-  form(style="margin: 0;", class=fmt"{BTN_STYLE} bg-red-200", action=url, `method`="post", input(type="submit", value=label))
+  form(style="margin: 0;", action=url, `method`="post", 
+    input(class=fmt"{BTN_STYLE} bg-red-300", type="submit", value=label))
 
 proc reloadParent* (): string =
   discard """
