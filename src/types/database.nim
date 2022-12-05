@@ -42,9 +42,10 @@ proc findCollection* (database: Database, collectionId: Id): Collection =
 proc nextId* (): Id =
   result = Id($genOid())
 
-proc saveDatabase* (database: Database) =
+proc saveDatabase* (database: Database): Database {.discardable.} =
   let js = database.toJson()
   writeFile("database.json", js)
+  database
 
 proc loadDatabase* (): Database =
   if fileExists("database.json"):

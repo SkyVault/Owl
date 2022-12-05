@@ -1,4 +1,4 @@
-import htmlgen, strformat
+import htmlgen, strformat, strutils
 
 proc modal* (id: string): tuple[markup: string, js: string, css: string] =
   let markup = `div`(
@@ -8,8 +8,13 @@ proc modal* (id: string): tuple[markup: string, js: string, css: string] =
   )
 
   let styles = """
-  .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0,0.4); }
-  .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; height: 500px; }
+  .modal { 
+    display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0,0.4); }
+  .modal-content { 
+    background-color: black;
+    color: white;
+    margin-left: auto; margin-right: auto;
+    padding: 4px; top: 0; border: 1px solid white; width: 500px; height: 500px }
   .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
   .close: hover, .close: focus { color: black; text-decoration: none; cursor: pointer; }
   """
@@ -26,7 +31,7 @@ proc modal* (id: string): tuple[markup: string, js: string, css: string] =
     modal.style.display = "block";
     const frame = document.createElement("iframe");
     frame.src = url;
-    frame.style = "minWidth: 500px; minHeight: 500px; width: 100%; height: 100%";
+    frame.style = "width: 100%; height: 100%; background-color: black;";
     while (modal.firstChild.firstChild) modal.firstChild.removeChild(modal.firstChild.firstChild);
     modal.firstChild.appendChild(frame);
     modal.firstChild.focus();
@@ -37,5 +42,42 @@ proc modal* (id: string): tuple[markup: string, js: string, css: string] =
 
   result = (markup: markup, js: js, css: styles)
 
+const BTN_STYLE = "rounded-full px-2 text-black"
+
+proc pageBase* (children: varargs[string]): string =
+  let (m, modalJs, modalCss) = modal("modal")
+  `div`(
+    script(src="https://cdn.tailwindcss.com"),
+    script(modalJs),
+    style(modalCss),
+    style("""
+      body { background-color: black; color: white; } 
+    """),
+    m,
+    class="max-w-md mx-auto",
+    children.join("\n"),
+  )
+
+proc textInput* (name: string, label: string): string =
+  `div`(
+    label(`for`=name, label & ": "), 
+    input(class="bg-slate-700 text-white", type="text", name=name)
+  )
+
+proc submitInputButton* (label: string): string =
+  input(type="submit", value=label, class=fmt"{BTN_STYLE} bg-green-300")
+
+proc actionButton* (title, onclick, color = "bg-pink-200"): string =
+  button(class=fmt"{BTN_STYLE} {color}", onclick=onclick, title)
+
 proc postButton* (label, url: string): string =
-  form(action=url, `method`="post", input(type="submit", value=label))
+  form(style="margin: 0;", class=fmt"{BTN_STYLE} bg-red-200", action=url, `method`="post", input(type="submit", value=label))
+
+proc reloadParent* (): string =
+  discard """
+    Used to reload the parent of a iframe, useful for closing modals and refreshing contents
+  """
+  script("window.parent.location.reload()")
+
+proc reload* (): string =
+  script("window.location.reload()")

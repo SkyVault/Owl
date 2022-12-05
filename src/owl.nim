@@ -12,7 +12,7 @@ type Action = tuple[title: string; actionEl: string]
 proc actionTitle(title: string, actions: varargs[string]): string =
   span(
     style="display: flex; align-items: center; column-gap: 8px",
-    h2(title), 
+    `div`(class="text-xl", title), 
     `div`(style="display: flex; column-gap: 8px", actions.join(""))
   )
 
@@ -25,87 +25,90 @@ proc actionSubTitle(title: string, actions: varargs[string]): string =
 
 proc fragmentDetails(db: Database, fragmentId: string): string =
   let fragment = findFragment(db, fragmentId)
-  `div`(
-    h3(fragment.title),
-    p(fragment.description)
+  pageBase(
+    `div`(class="text-3xl mt-2", fragment.title),
+    `div`(class="text-xl text-slate-400", fragment.description)
   )
 
 proc collectionDetailsActions(db: Database, id: Id): string =
   span(
-    button("+", onclick="show_addfrag('/select-fragment/add-fragment-to-collection/" & id & "')")
+    actionButton("+", onclick="show_modal('/select-fragment/add-fragment-to-collection/" & id & "')", "bg-green-300")
   )
 
 proc collectionDetails(db: Database, collectionId: string): string =
-  let (addFrag, modalJs, modalCss) = modal("addfrag")
-
   let collection = findCollection(db, collectionId)
-  `div`(
-    script(modalJs),
-    style(modalCss),
-    addFrag,
-    h3(collection.title),
-    p(collection.description),
+
+  let fragments = collect:
+    for id in collection.fragments.items:
+      let frag = findFragment(db, id)
+      `div`(
+        style="display: flex; align-items: center; column-gap: 8px",
+        postButton("-", "/remove-fragment-from-collection/" & collectionId & "/" & frag.id),
+        p(frag.title)
+      )
+
+  pageBase(
+    `div`(class="text-3xl mt-2", collection.title),
+    `div`(class="text-xl text-slate-400", collection.description),
+    fragments.join(""), br(),
     collectionDetailsActions(db, collection.id)
   )
 
 proc createFragmentForm(db: Database): string =
   form(action="/new-fragment", `method`="post",
-    h2("NEW FRAGMENT"),
-    label(`for`="title", "Title: "), 
-    input(type="text", name="title"), br(),
-    label(`for`="description", "Description: "), 
-    input(type="text", name="description"), br(),
-    input(type="submit", value="Submit")
+    script(src="https://cdn.tailwindcss.com"),
+    `div`(
+      class="text-white",
+      `div`(class="text-3xl","NEW FRAGMENT"),
+      textInput("title", "Title"), br(),
+      textInput("description", "Description"), br(),
+      submitInputButton("Submit"),
+    )
   )
 
 proc createCollectionForm(db: Database): string =
   form(action="/new-collection", `method`="post",
-    h2("NEW COLLECTION"),
-    label(`for`="title", "Title: "), 
-    input(type="text", name="title"), br(),
-    label(`for`="description", "Description: "), 
-    input(type="text", name="description"), br(),
-    input(type="submit", value="Submit")
+    script(src="https://cdn.tailwindcss.com"),
+    `div`(
+      class="text-white",
+      `div`(class="text-3xl", "NEW COLLECTION"),
+      textInput("title", "Title"), br(),
+      textInput("description", "Description"), br(),
+      submitInputButton("Submit"),
+    )
   )
 
 proc selectFragment(db: Database, postPrefix, postDest: string): string =
   `div`(
+    script(src="https://cdn.tailwindcss.com"),
     collect(
       for f in db.fragments:
-        span(
-          style="display: flex; column-gap: 8px; align-items: center;",
-          p(f.title), button(
-            style="height: 24px",
-            "select", onclick="window.location.href = '/" & postPrefix & "/" & postDest & "/" & f.id & "'"))
+        `div`(
+          class="text-white flex gap-2",
+          p(f.title), 
+          actionButton("Select", onclick="window.location.href = '/" & postPrefix & "/" & postDest & "/" & f.id & "'"))
     ).join("")
   )
 
 proc dashboard(db: Database): string =
-  let (fragmentDetailsModal, modalJs, modalCss) = modal("fragment_details")
-  let (collectionDetailsModal, collModalJs, _) = modal("collection_details")
-  let (createFragmentsModal, createFragmentsJs, _) = modal("createf")
-  let (createCollectionModal, createCollectionJs, _) = modal("createc")
-
-  `div`(
-    style(modalCss, "\n"),
-    script(modalJs, "\n", collModalJs,"\n" , createFragmentsJs, "\n", createCollectionJs),
-    fragmentDetailsModal,
-    collectionDetailsModal,
-    createFragmentsModal,
-    createCollectionModal,
+  pageBase(
+    `div`(class="text-4xl mb-2", "Database"),
     `div`(
-      h1("Database"),
+      class="mb-4",
       actionTitle(
         "Collections",
-        button("+", onclick="show_createc('/create-collection')")
+        actionButton("+", onclick="show_modal('/create-collection')", "bg-green-300")
       ),
       ul(
         collect(
           for c in db.collections:
-            actionSubTitle(
-              a(onclick=fmt"show_collection_details('/collection/{c.id}')", c.title),
-              button(style="height: 24px", "Open", onclick=fmt"window.location.href += 'collection/" & c.id & "'"),
-              postButton("Delete", "/delete-collection/" & c.id)
+            `div`(
+              class="mb-1",
+              actionSubTitle(
+                a(class="text-blue-600", onclick=fmt"show_modal('/collection/{c.id}')", c.title),
+                actionButton("Open", onclick=fmt"window.location.href += 'collection/" & c.id & "'"),
+                postButton("Delete", "/delete-collection/" & c.id)
+              )
             )
         ).join("")
       )
@@ -114,16 +117,19 @@ proc dashboard(db: Database): string =
     `div`(
       actionTitle(
         "Fragments",
-        button("+", onclick=fmt"show_createf('/create-fragment')")
+        actionButton("+", onclick=fmt"show_modal('/create-fragment')", "bg-green-300")
       ),
-      ul(
+      `div`(
         collect(
           for f in db.fragments:
-            actionSubTitle(
-              a(onclick=fmt"show_fragment_details('/fragment/{f.id}')", f.title), 
-              button(style="height: 24px", "Open", onclick=fmt"window.location.href += 'fragment/" & f.id & "'"),
-              postButton("Delete", "/delete-fragment/" & f.id)
-            ),
+            `div`(
+              class="mb-1",
+              actionSubTitle(
+                a(class="text-blue-600", onclick=fmt"show_modal('/fragment/{f.id}')", f.title), 
+                actionButton("Open", onclick=fmt"window.location.href += 'fragment/" & f.id & "'"),
+                postButton("Delete", "/delete-fragment/" & f.id)
+              ),
+            )
         ).join("")
       )
     )
@@ -153,8 +159,12 @@ routes:
     resp selectFragment(loadDatabase(), @"post-prefix", @"post-dest") 
 
   get "/add-fragment-to-collection/@collection-id/@fragment-id":
-    
-    resp script(""" window.top.location.href = "/" """)
+    loadDatabase() |> addFragmentToCollection(@"collection-id", @"fragment-id") |> saveDatabase
+    resp reloadParent()
+
+  post "/remove-fragment-from-collection/@collection-id/@fragment-id":
+    loadDatabase() |> removeFragmentFromCollection(@"collection-id", @"fragment-id") |> saveDatabase
+    resp script("window.location.replace('/collection/" & @"collection-id" & "')")
 
   post "/delete-fragment/@fragment-id":
     loadDatabase() |> deleteFragmentMutation(@"fragment-id") |> saveDatabase
