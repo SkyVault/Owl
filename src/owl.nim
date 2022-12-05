@@ -107,7 +107,7 @@ proc dashboard(db: Database): string =
               actionSubTitle(
                 a(class="text-blue-600", onclick=fmt"show_modal('/collection/{c.id}')", c.title),
                 actionButton("Open", onclick=fmt"window.location.href += 'collection/" & c.id & "'"),
-                postButton("Delete", "/delete-collection/" & c.id)
+                postButton("X", "/delete-collection/" & c.id)
               )
             )
         ).join("")
@@ -123,12 +123,17 @@ proc dashboard(db: Database): string =
         collect(
           for f in db.fragments:
             `div`(
-              class="mb-1",
-              actionSubTitle(
-                a(class="text-blue-600", onclick=fmt"show_modal('/fragment/{f.id}')", f.title), 
-                actionButton("Open", onclick=fmt"window.location.href += 'fragment/" & f.id & "'"),
-                postButton("Delete", "/delete-fragment/" & f.id)
+              class="flex justify-between w-100 mb-2",
+              `div`(
+                class="flex flex-row gap-1",
+                if f.status != "": `div`(class="text-pink-400 rounded bg-slate-700 px-2", f.status) else: "",
+                a(class="text-blue-600", onclick=fmt"show_modal('/fragment/{f.id}')", f.title)
               ),
+              `div`(
+                class="flex flex-row gap-1",
+                actionButton("Open", onclick=fmt"window.location.href += 'fragment/" & f.id & "'"),
+                postButton("X", "/delete-fragment/" & f.id),
+              )
             )
         ).join("")
       )

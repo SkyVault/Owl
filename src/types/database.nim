@@ -16,6 +16,7 @@ type
 
   Fragment* = object of Atom
     tags* : HashSet[string]
+    status* : string
     case kind* : FragmentKind
       of FragmentKind.document:
         fragments* : seq[Fragment]
@@ -28,6 +29,10 @@ type
   Database* = object
     collections* : seq[Collection]
     fragments* : seq[Fragment]
+
+proc statuses* (database: Database): HashSet[string] =
+  for f in database.fragments:
+    result.incl(f.status)
 
 proc findFragment* (database: Database, fragmentId: Id): Fragment =
   for f in database.fragments:
@@ -59,7 +64,8 @@ proc loadDatabase* (): Database =
           kind: FragmentKind.h1,
           title: "Hello",
           description: "Description of the fragment",
-          h1: "hello"
+          h1: "hello",
+          status: "",
         )
       ]
     )
