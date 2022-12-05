@@ -31,6 +31,11 @@ type
     fragments* : seq[Fragment]
 
 proc statuses* (database: Database): HashSet[string] =
+  result.incl "Backlog";
+  result.incl "In-Progress";
+  result.incl "Completed";
+  result.incl "Feedback";
+  result.incl "Testing";
   for f in database.fragments:
     result.incl(f.status)
 
@@ -65,7 +70,7 @@ proc loadDatabase* (): Database =
           title: "Hello",
           description: "Description of the fragment",
           h1: "hello",
-          status: "",
+          status: "Backlog",
         )
       ]
     )

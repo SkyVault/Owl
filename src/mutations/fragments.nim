@@ -18,11 +18,8 @@ proc setFragmentStatusMutation* (db: Database, fragmentId: string, status: strin
   var 
     fs = db.fragments.filter(f => f.id != fragmentId)
     fr = findFragment(db, fragmentId)
-
   fr.status = status
-
   fs.add(fr)
-
   cascade db:
     fragments = fs
 

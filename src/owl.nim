@@ -23,10 +23,32 @@ proc actionSubTitle(title: string, actions: varargs[string]): string =
     `div`(style="display: flex; column-gap: 8px", actions.join(""))
   )
 
+proc statusLabel* (fragmentId: string, status: string, statusList: string): string =
+    if status != "": 
+      `div`(
+        onclick=fmt"open_selection_modal((it) => {{ window.location.href = '/set-fragment-status/{fragmentId}/' + it; close_selection_modal() }}, [{statusList}])",
+        class="text-pink-400 rounded bg-slate-700 px-2", 
+        status
+      ) 
+    else: 
+      ""
+
 proc fragmentDetails(db: Database, fragmentId: string): string =
   let fragment = findFragment(db, fragmentId)
+  let 
+    (sm, smJs, smCss) = selectionModal("selection_modal")
+    statuses = db.statuses()
+    statusXs = collect(for s in statuses: &"'{s}'").join(", ")
+
   pageBase(
-    `div`(class="text-3xl mt-2", fragment.title),
+    sm,
+    script(smJs),
+    style(smCss),
+    `div`(
+      class="flex",
+      `div`(class="text-3xl mt-2", fragment.title),
+      statusLabel(fragment.id, fragment.status, statusXs)
+    ),
     `div`(class="text-xl text-slate-400", fragment.description)
   )
 
@@ -37,17 +59,26 @@ proc collectionDetailsActions(db: Database, id: Id): string =
 
 proc collectionDetails(db: Database, collectionId: string): string =
   let collection = findCollection(db, collectionId)
+  let 
+    (sm, smJs, smCss) = selectionModal("selection_modal")
+    statuses = db.statuses()
+    statusXs = collect(for s in statuses: &"'{s}'").join(", ")
 
   let fragments = collect:
     for id in collection.fragments.items:
       let frag = findFragment(db, id)
       `div`(
-        style="display: flex; align-items: center; column-gap: 8px",
-        postButton("-", "/remove-fragment-from-collection/" & collectionId & "/" & frag.id),
-        p(frag.title)
+        class="flex justify-between mb-2 gap-2",
+        `div`(
+          class="flex gap-2",
+          postButton("-", "/remove-fragment-from-collection/" & collectionId & "/" & frag.id),
+          p(frag.title),
+        ),
+        statusLabel(frag.id, frag.status, statusXs)
       )
 
   pageBase(
+    sm, script(smJs), style(smCss),
     `div`(class="text-3xl mt-2", collection.title),
     `div`(class="text-xl text-slate-400", collection.description),
     fragments.join(""), br(),
@@ -112,7 +143,6 @@ proc dashboard(db: Database): string =
     sm,
     script(smJs),
     style(smCss),
-    # button("testme", onclick=fmt"open_selection_modal((it) => {{ console.log(it); close_selection_modal() }}, [{statusXs}])"),
     `div`(class="text-4xl mb-2", "Database"),
     `div`(
       class="mb-4",
@@ -147,18 +177,11 @@ proc dashboard(db: Database): string =
               class="flex justify-between w-100 mb-2",
               `div`(
                 class="flex flex-row gap-1",
-                if f.status != "": 
-                  `div`(
-                    onclick=fmt"open_selection_modal((it) => {{ window.location.href = '/set-fragment-status/{f.id}/' + it; close_selection_modal() }}, [{statusXs}])",
-                    class="text-pink-400 rounded bg-slate-700 px-2", 
-                    f.status
-                  ) 
-                else: 
-                  "",
-                a(class="text-blue-600", onclick=fmt"show_modal('/fragment/{f.id}')", f.title)
+                a(class="text-blue-600", onclick=fmt"show_modal('/fragment/{f.id}')", f.title),
               ),
               `div`(
                 class="flex flex-row gap-1",
+                statusLabel(f.id, f.status, statusXs),
                 actionButton("Open", onclick=fmt"window.location.href += 'fragment/" & f.id & "'"),
                 postButton("X", "/delete-fragment/" & f.id),
               )
@@ -197,7 +220,7 @@ routes:
 
   get "/set-fragment-status/@fragment-id/@status":
     loadDatabase() |> setFragmentStatusMutation(@"fragment-id", encodeUrl(@"status")) |> saveDatabase
-    resp script("window.location.replace('/')")
+    resp script("window.parent.location.replace('/')")
 
   post "/remove-fragment-from-collection/@collection-id/@fragment-id":
     loadDatabase() |> removeFragmentFromCollection(@"collection-id", @"fragment-id") |> saveDatabase

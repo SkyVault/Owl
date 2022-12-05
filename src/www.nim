@@ -93,7 +93,7 @@ proc pageBase* (children: varargs[string]): string =
       body { background-color: black; color: white; } 
     """),
     m,
-    class="max-w-lg mx-auto",
+    class="max-w-2xl mx-auto",
     children.join("\n"),
   )
 
